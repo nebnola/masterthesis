@@ -112,17 +112,19 @@ class DecodeDM:
             if verbosity >= 1:
                 print(f"Epoch {t + 1}")
             self.epoch(verbosity=verbosity)
-            if verbosity >= 2 or history:
-                training_loss, test_loss = self.test()
-                if history:
-                    training_record[t, 1] = training_loss
-                    training_record[t, 2] = test_loss
-                    training_record[t, 3] = self.scheduler.get_last_lr()[0]
-                if verbosity >= 2:
-                    print(f"Training Loss: {training_loss:>0.5f}, Test Loss: {test_loss:>0.5f}")
-                    print(f"Learning Rate: {self.scheduler.get_last_lr()}")
+            training_loss, test_loss = self.test()
+            if history:
+                training_record[t, 1] = training_loss
+                training_record[t, 2] = test_loss
+                training_record[t, 3] = self.scheduler.get_last_lr()[0]
+            if verbosity >= 2:
+                print(f"Training Loss: {training_loss:>0.5f}, Test Loss: {test_loss:>0.5f}")
+                print(f"Learning Rate: {self.scheduler.get_last_lr()}")
 
-            self.scheduler.step()
+            if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                self.scheduler.step(training_loss)
+            else:
+                self.scheduler.step()
         if history:
             self.training_record = training_record
 

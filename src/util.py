@@ -13,7 +13,34 @@ theme_chill = (
         + p9.theme(
     plot_background=p9.element_rect(fill=(0,0,0,0), size=0),
     panel_background = p9.element_rect(fill=(0,0,0,0)),
+    legend_background=p9.element_rect(fill=(0, 0, 0, 0)),
 ))
+
+theme_arguelles = (
+    p9.theme_bw(base_size=14) +
+    p9.theme(
+        text=p9.element_text(family="Alegreya", color="#343A40"),
+        axis_text=p9.element_text(family="sans"),
+        plot_background=p9.element_rect(fill=(0, 0, 0, 0), size=0),
+        panel_background=p9.element_rect(fill=(0, 0, 0, 0)),
+        legend_background=p9.element_rect(fill=(0, 0, 0, 0)),
+        strip_background=p9.element_rect(fill="#343A40"),
+        strip_text=p9.element_text(color="#F8F9FA"),
+    )
+)
+
+theme_arguelles_sans = (
+        p9.theme_bw(base_size=14) +
+        p9.theme(
+            text=p9.element_text(family="Alegreya Sans", color="#343A40"),
+            axis_text=p9.element_text(family="sans", size=9, color="#4D4D4D"),
+            plot_background=p9.element_rect(fill=(0, 0, 0, 0), size=0),
+            panel_background=p9.element_rect(fill=(0, 0, 0, 0)),
+            legend_background=p9.element_rect(fill=(0, 0, 0, 0)),
+            strip_background=p9.element_rect(fill="#343A40"),
+            strip_text=p9.element_text(color="#F8F9FA"),
+        )
+)
 
 def visualize_graph_3d(coords, adjacency_matrix, threshold):
     """

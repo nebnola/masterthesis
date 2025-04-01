@@ -63,7 +63,7 @@ class DecodeDM:
                                       torch.tensor(labels[:training_size, ...]))
         test_dataset = TensorDataset(torch.tensor(inputs[training_size:, ...]),
                                      torch.tensor(labels[training_size:, ...]))
-        self.train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
+        self.train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         self.test_dataloader = DataLoader(test_dataset, batch_size=batch_size)
         self.loss_fn = loss_fn
         self.epochs = epochs

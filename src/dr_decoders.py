@@ -1,15 +1,18 @@
 import pickle
+from typing import override
 
+import numpy as np
 import pandas as pd
 
+from src.diffusion_map import DiffusionMap
 
-class DRRun:
+
+class DRDecoders:
     """
     A class to contain decoders for a dimensionality reduction
-    TODO: integrate with DMRun. DMRun should probably inherit from DRRun
     """
 
-    def __init__(self, data: pd.DataFrame, encoding=None, parameters=None, description=None):
+    def __init__(self, data: pd.DataFrame, encoding: pd.DataFrame=None, parameters=None, description=None):
         """
 
         Args:
@@ -107,3 +110,47 @@ class DRRun:
     def from_dummy_data(cls):
         # TODO
         pass
+
+
+class DMDecoders(DRDecoders):
+    @override
+    def __init__(self, data: pd.DataFrame, dm: DiffusionMap = None, encoding: pd.DataFrame = None, parameters=None,
+                 description=None):
+        """
+
+        Args:
+            data: The original data
+            dm: The DiffusionMap object applied to the data
+            encoding: The encoding of the data, i.e. the DiffusionMap applied with a given t
+            parameters: The underlying parameters used, if any, to generate the data. Relevant mostly for synthetic data
+            description: A description of the run. This is only stored and can be set freely
+        """
+        super().__init__(data, encoding, parameters, description)
+        self.dm = dm
+
+    def calculate_dmap(self, t=None, *args, **kwargs):
+        """Calculate DiffusionMap. If t is set, also set encoding"""
+        # TODO: introduce option to only use some columns
+        dm = DiffusionMap(np.array(self.data), *args, **kwargs)
+        self.dm = dm
+        if t is not None:
+            self.set_dmap(t)
+
+    def set_dmap(self, t):
+        """Calculate and set the encoding attribute from an already calculated DiffusionMap"""
+        dmap = self.dm.dmap(t)
+        column_names = [f"dc{i}" for i in range(1, dmap.shape[1] + 1)]
+        self.encoding = pd.DataFrame(dmap, columns=column_names)
+
+        return self
+
+    @override
+    def copy(self, include_encoding=True):
+        """
+        Copy data and (optionally) map to a new object. The decoders are not copied.
+        Does not perform a deep copy. The data, dm and dmap attributes are still shared!
+        """
+        new = super().copy(include_encoding=include_encoding)
+        if include_encoding:
+            new.dm = self.dm
+        return new

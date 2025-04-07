@@ -4,9 +4,10 @@ from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
 
-class DecodeDMModel(nn.Module):
+class FeedForward(nn.Module):
     """
-    Model for "decoding" output from diffusion map back to original data
+    Feed-forward network
+    Used e.g. for "decoding" output from dimensionality reduction algorithm back to original data
     """
 
     def __init__(self, input_dim: int, output_dim: int, hidden_layers=[50, 50], activation_function=nn.ReLU):
@@ -35,7 +36,7 @@ class DecodeDMModel(nn.Module):
         return self.stack(x)
 
 
-class DecodeDM:
+class Trainer:
     """
     Contains the necessary logic for training the model
     """
@@ -49,7 +50,7 @@ class DecodeDM:
             training_size: int,
             loss_fn,
             epochs: int,
-            batch_size: int,
+            batch_size: int = 32,
             lr: float = None,
             scheduler: type = None,
             scheduler_kwargs: dict = None,
@@ -64,7 +65,13 @@ class DecodeDM:
         test_dataset = TensorDataset(torch.tensor(inputs[training_size:, ...]),
                                      torch.tensor(labels[training_size:, ...]))
         self.train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        self.test_dataloader = DataLoader(test_dataset, batch_size=batch_size)
+        if len(test_dataset) <= 5000:
+            test_batch_size = 5000
+        else:
+            # divide test into equal sized batches of at most 5000
+            n_batches = np.ceil(len(test_dataset)/5000)
+            test_batch_size = int(np.ceil(len(test_dataset)/n_batches))
+        self.test_dataloader = DataLoader(test_dataset, batch_size=test_batch_size)
         self.loss_fn = loss_fn
         self.epochs = epochs
         self.lr = lr
@@ -137,7 +144,6 @@ class DecodeDM:
                 pred = self.model(X)
                 training_loss += self.loss_fn(pred, y).item()
             for X, y in self.test_dataloader:
-                # TODO: we don't really need a test data loader, do it all at once
                 X, y = X.to(self.device), y.to(self.device)
                 pred = self.model(X)
                 test_loss += self.loss_fn(pred, y).item()

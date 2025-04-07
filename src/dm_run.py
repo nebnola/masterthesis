@@ -6,12 +6,12 @@ import pandas as pd
 from src.diffusion_map import DiffusionMap
 
 
-class DMRun:
+class DMRunOld:
     def __init__(self, data, parameters=None, description=None):
         self.data = data
         self.parameters = parameters
         self.dm = None
-        self.dmap = None
+        self.encoding = None
         self.decoders = pd.DataFrame()
         self.description = description
 
@@ -25,9 +25,9 @@ class DMRun:
 
     def set_dmap(self, t):
         """Calculate and set the dmap attribute from an already calculated DiffusionMap"""
-        dmap = self.dm.dmap(t)
+        dmap = self.dm.encoding(t)
         column_names = [f"dc{i}" for i in range(1, dmap.shape[1] + 1)]
-        self.dmap = pd.DataFrame(dmap, columns=column_names)
+        self.encoding = pd.DataFrame(dmap, columns=column_names)
 
         return self
 
@@ -81,8 +81,8 @@ class DMRun:
         dfs_to_be_joined=[]
         if self.parameters is not None:
             dfs_to_be_joined.append(self.parameters)
-        if self.dmap is not None:
-            dfs_to_be_joined.append(self.dmap)
+        if self.encoding is not None:
+            dfs_to_be_joined.append(self.encoding)
         if len(dfs_to_be_joined) == 0:
             return self.data
         return self.data.join(dfs_to_be_joined)
@@ -93,10 +93,10 @@ class DMRun:
         Does not perform a deep copy. The data, dm and dmap attributes are still shared!
         """
 
-        new = DMRun(data=self.data, parameters=self.parameters)
+        new = DMRunOld(data=self.data, parameters=self.parameters)
         if include_dmap:
             new.dm = self.dm
-            new.dmap = self.dmap
+            new.encoding = self.encoding
         return new
 
     def to_file(self, filename):
@@ -114,3 +114,5 @@ class DMRun:
     def from_dummy_data(cls):
         #TODO
         pass
+
+

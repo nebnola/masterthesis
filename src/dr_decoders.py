@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from src.diffusion_map import DiffusionMap
+from src.neural_network import Trainer
 
 
 class DRDecoders:
@@ -39,14 +40,21 @@ class DRDecoders:
         # TODO: might use xarray instead
         self.decoders = self.decoders._append(kwargs | {'decoder': decoder}, ignore_index=True)
 
-    def get_decoder(self, **kwargs):
-        """Get decoder matching the key value pairs passed in as keyword arguments.
-        Intended for cases where there is only one decoder matching these parameters
+    def get_decoders(self, **kwargs) -> list[Trainer]:
+        """
+        Get all decoders matching the key value pairs passed in as keyword arguments.
         """
         decoder_filter = True
         for key, val in kwargs.items():
             decoder_filter = decoder_filter & (self.decoders[key] == val)
-        return self.decoders.loc[decoder_filter, 'decoder'].item()
+        return list(self.decoders.loc[decoder_filter, 'decoder'])
+
+    def get_decoder(self, **kwargs) -> Trainer:
+        """
+        Get decoder matching the key value pairs passed in as keyword arguments.
+        Intended for cases where there is only one decoder matching these parameters
+        """
+        return self.get_decoders(**kwargs)[0]
 
     def decode(self, **kwargs):
         """Get reconstruction of original data using the decoder matching the keyword arguments"""
@@ -64,6 +72,7 @@ class DRDecoders:
 
     def test_decoders(self):
         """Test decoders and store the result in the decoders structure"""
+        # TODO only test decoders which have not been tested?
         training_losses, test_losses = [], []
         for i in range(len(self.decoders)):
             run = self.decoders["decoder"][i]

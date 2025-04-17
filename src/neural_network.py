@@ -39,6 +39,7 @@ class FeedForward(nn.Module):
 class Trainer:
     """
     Contains the necessary logic for training the model
+    TODO: make it possible to continue training
     """
     device = "cpu"
 
@@ -50,12 +51,32 @@ class Trainer:
             training_size: int,
             loss_fn,
             epochs: int,
+            weight_decay=0,
             batch_size: int = 32,
             lr: float = None,
             scheduler: type = None,
             scheduler_kwargs: dict = None,
-            weight_decay=0,
+            early_stopping_patience: int | None = None,
     ):
+        """
+
+        Args:
+            model:
+            inputs:
+            labels:
+            training_size:
+            loss_fn:
+            epochs:
+            weight_decay:
+            batch_size:
+            lr:
+            scheduler:
+            scheduler_kwargs:
+            early_stopping_patience: Used for early stopping when using ReduceLROnPlateau.
+                Early stopping is activated when early_stopping_patience is set to an integer.
+                After ReduceLROnPlateau reaches its last learning rate, training is continued for early_stopping_patience
+                epochs, then stopped
+        """
         model = model.to(self.device)
         self.model = model
         inputs = np.array(inputs)
@@ -83,6 +104,9 @@ class Trainer:
         if scheduler_kwargs is None:
             scheduler_kwargs = dict()
         self.scheduler = scheduler(self.optimizer, **scheduler_kwargs)
+        if early_stopping_patience is not None and scheduler != torch.optim.lr_scheduler.ReduceLROnPlateau:
+            raise Warning("early_stopping has no effect when not using ReduceLROnPlateau as learning rate scheduler")
+        self.early_stopping_patience = early_stopping_patience
 
     def epoch(self, verbosity=3):
         """Train the model for one epoch"""
@@ -115,6 +139,7 @@ class Trainer:
             # TODO: use data frame as training record
             training_record = np.empty((self.epochs, 4))
             training_record[:, 0] = range(1, self.epochs + 1)  # first column is just the number of epochs
+        early_stopping_count = 0
         for t in range(self.epochs):
             if verbosity >= 1:
                 print(f"Epoch {t + 1}")
@@ -130,6 +155,12 @@ class Trainer:
 
             if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
                 self.scheduler.step(training_loss)
+                if self.early_stopping_patience is not None:
+                    if self.scheduler.get_last_lr()[0] <= self.scheduler.default_min_lr:
+                        early_stopping_count += 1
+                if early_stopping_count > self.early_stopping_patience:
+                    training_record = training_record[:(t+1),:]
+                    break
             else:
                 self.scheduler.step()
         if history:

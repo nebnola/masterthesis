@@ -1,5 +1,5 @@
 import pickle
-from typing import override
+from typing import override, Self
 
 import numpy as np
 import pandas as pd
@@ -29,7 +29,7 @@ class DRDecoders:
         self.decoders = pd.DataFrame()
         self.description = description
 
-    def add_decoder(self, decoder, **kwargs):
+    def add_decoder(self, decoder: Trainer, **kwargs):
         """Add a decoder to the structure. Use arbitrary keyword arguments to label it with attributes
         Use the same structure (name and type) for the attributes for all decoders, however this is not enforced
         Do not use the following keys:
@@ -105,13 +105,13 @@ class DRDecoders:
             new.encoding = self.encoding
         return new
 
-    def to_file(self, filename):
+    def to_file(self, filename: str):
         """Save DRRun with all its data and the decoders"""
         with open(filename, 'wb') as file:
             pickle.dump(self, file)
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename: str) -> Self:
         with open(filename, 'rb') as file:
             return pickle.load(file)
 
@@ -149,7 +149,7 @@ class DMDecoders(DRDecoders):
         """Calculate and set the encoding attribute from an already calculated DiffusionMap"""
         dmap = self.dm.dmap(t)
         column_names = [f"dc{i}" for i in range(1, dmap.shape[1] + 1)]
-        self.encoding = pd.DataFrame(dmap, columns=column_names)
+        self.encoding = pd.DataFrame(dmap, index=self.data.index, columns=column_names)
 
         return self
 

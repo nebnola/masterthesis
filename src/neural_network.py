@@ -158,9 +158,9 @@ class Trainer:
                 if self.early_stopping_patience is not None:
                     if self.scheduler.get_last_lr()[0] <= self.scheduler.default_min_lr:
                         early_stopping_count += 1
-                if early_stopping_count > self.early_stopping_patience:
-                    training_record = training_record[:(t+1),:]
-                    break
+                    if early_stopping_count > self.early_stopping_patience:
+                        training_record = training_record[:(t+1),:]
+                        break
             else:
                 self.scheduler.step()
         if history:

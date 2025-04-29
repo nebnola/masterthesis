@@ -13,7 +13,7 @@ class DRDecoders:
     A class to contain decoders for a dimensionality reduction
     """
 
-    def __init__(self, data: pd.DataFrame, encoding: pd.DataFrame=None, parameters=None, description=None):
+    def __init__(self, data: pd.DataFrame, encoding: pd.DataFrame=None, parameters=None, description=None) -> None:
         """
 
         Args:
@@ -24,12 +24,18 @@ class DRDecoders:
             description: A description of the run. This is only stored and can be set freely
         """
         self.data = data
+        # feature_columns is a list of all columns that are used for training - as opposed to columns which contain
+        # e.g. labels or supplementary information
+        try:
+            self.feature_columns = data.attrs["feature_columns"]
+        except KeyError:
+            self.feature_columns = None
         self.encoding = encoding
         self.parameters = parameters
         self.decoders = pd.DataFrame()
         self.description = description
 
-    def add_decoder(self, decoder: Trainer, **kwargs):
+    def add_decoder(self, decoder: Trainer, **kwargs) -> None:
         """Add a decoder to the structure. Use arbitrary keyword arguments to label it with attributes
         Use the same structure (name and type) for the attributes for all decoders, however this is not enforced
         Do not use the following keys:
@@ -56,21 +62,22 @@ class DRDecoders:
         """
         return self.get_decoders(**kwargs)[0]
 
-    def decode(self, **kwargs):
+    def decode(self, **kwargs) -> pd.DataFrame:
         """Get reconstruction of original data using the decoder matching the keyword arguments"""
         # TODO write reconstruction for all decoders into one datastructure (xarray? DataFrame with MultiIndex?)
         decoder = self.get_decoder(**kwargs)
-        # assume the training
         test_data = decoder.test_dataloader.dataset.tensors[0]
         output = decoder.model(test_data)
-        return pd.DataFrame(output.detach().numpy(), columns=list(self.data.columns))
+        # get index. Assume test data is at the end of the data frame
+        size = len(output)
+        return pd.DataFrame(output.detach().numpy(), index=self.data.index[-size:], columns=list(self.feature_columns))
 
-    def get_training_size(self, **kwargs):
+    def get_training_size(self, **kwargs) -> int:
         """Get training size that was used for training a decoder given by kwargs"""
         decoder = self.get_decoder(**kwargs)
         return len(decoder.train_dataloader.dataset)
 
-    def test_decoders(self):
+    def test_decoders(self) -> None:
         """Test decoders and store the result in the decoders structure"""
         # TODO only test decoders which have not been tested?
         training_losses, test_losses = [], []
@@ -83,7 +90,20 @@ class DRDecoders:
         self.decoders["test_loss"] = test_losses
 
     @property
-    def df(self):
+    def features(self):
+        """Get features of dataset. I.e. only the columns which are supposed to be used for training"""
+        if self.feature_columns:
+            return self.data[self.feature_columns]
+        return self.data
+
+    @property
+    def features_std(self):
+        """Get standardized features"""
+        features = self.features
+        return (features - np.mean(features, axis=0)) / np.std(features, axis=0, ddof=0)
+
+    @property
+    def df(self) -> pd.DataFrame:
         dfs_to_be_joined = []
         if self.parameters is not None:
             dfs_to_be_joined.append(self.parameters)
@@ -93,7 +113,7 @@ class DRDecoders:
             return self.data
         return self.data.join(dfs_to_be_joined)
 
-    def copy(self, include_encoding=True):
+    def copy(self, include_encoding=True) -> Self:
         """
         Copy data and (optionally) map to a new object. The decoders are not copied.
         Does not perform a deep copy. The data, encoding and parameters attributes are still shared!
@@ -105,7 +125,7 @@ class DRDecoders:
             new.encoding = self.encoding
         return new
 
-    def to_file(self, filename: str):
+    def to_file(self, filename: str) -> None:
         """Save DRRun with all its data and the decoders"""
         with open(filename, 'wb') as file:
             pickle.dump(self, file)
@@ -137,10 +157,12 @@ class DMDecoders(DRDecoders):
         super().__init__(data, encoding, parameters, description)
         self.dm = dm
 
-    def calculate_dmap(self, t=None, *args, **kwargs):
+    def calculate_dmap(self, t=None, standardize=True, *args, **kwargs):
         """Calculate DiffusionMap. If t is set, also set encoding"""
-        # TODO: introduce option to only use some columns
-        dm = DiffusionMap(np.array(self.data), *args, **kwargs)
+        if standardize:
+            dm = DiffusionMap(np.array(self.features_std), *args, **kwargs)
+        else:
+            dm = DiffusionMap(np.array(self.features), *args, **kwargs)
         self.dm = dm
         if t is not None:
             self.set_dmap(t)

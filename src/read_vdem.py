@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-def read_vdem(shuffled=True, only_dm=True, only_vdem=True, standardize=True):
+def read_vdem(shuffled=True, only_vdem=True):
     """
     Read V-Dem dataset and return it as a DataFrame
     Args:
@@ -23,13 +23,8 @@ def read_vdem(shuffled=True, only_dm=True, only_vdem=True, standardize=True):
         use_columns = (["country_name", "country_text_id", "country_id", "year", "COWcode"] +
                        [col for col in (vdem.columns) if (col.startswith('v2'))])
         vdem = vdem[use_columns]
-    if only_dm:
-        use_columns = [col for col in vdem.columns if col.startswith('v2') and col != 'v2x_polyarchy']
-        vdem = vdem[use_columns]
-        if standardize:
-            vdem = (vdem - np.mean(vdem, axis=0)) / np.std(vdem, axis=0)
-    if standardize and not only_dm:
-        raise ValueError("can only standardize if only_dm is set")
+    feature_columns = [col for col in vdem.columns if col.startswith('v2') and col != 'v2x_polyarchy']
+    vdem.attrs.update({"feature_columns": feature_columns})
     if shuffled:
         n = len(vdem)
         rng = np.random.default_rng(seed=1)

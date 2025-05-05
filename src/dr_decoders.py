@@ -1,11 +1,13 @@
+import numbers
 import pickle
-from typing import override, Self
+from typing import override, Self, Iterable, Callable
 
 import numpy as np
 import pandas as pd
+from torch import nn
 
 from src.diffusion_map import DiffusionMap
-from src.neural_network import Trainer
+from src.neural_network import TrainerABC, TrainParams, TrainerNew
 
 
 class DRDecoders:
@@ -35,7 +37,7 @@ class DRDecoders:
         self.decoders = pd.DataFrame()
         self.description = description
 
-    def add_decoder(self, decoder: Trainer, **kwargs) -> None:
+    def add_decoder(self, decoder: TrainerABC, **kwargs) -> None:
         """Add a decoder to the structure. Use arbitrary keyword arguments to label it with attributes
         Use the same structure (name and type) for the attributes for all decoders, however this is not enforced
         Do not use the following keys:
@@ -46,7 +48,7 @@ class DRDecoders:
         # TODO: might use xarray instead
         self.decoders = self.decoders._append(kwargs | {'decoder': decoder}, ignore_index=True)
 
-    def get_decoders(self, **kwargs) -> list[Trainer]:
+    def get_decoders(self, **kwargs) -> list[TrainerABC]:
         """
         Get all decoders matching the key value pairs passed in as keyword arguments.
         """
@@ -55,12 +57,49 @@ class DRDecoders:
             decoder_filter = decoder_filter & (self.decoders[key] == val)
         return list(self.decoders.loc[decoder_filter, 'decoder'])
 
-    def get_decoder(self, **kwargs) -> Trainer:
+    def get_decoder(self, **kwargs) -> TrainerABC:
         """
         Get decoder matching the key value pairs passed in as keyword arguments.
         Intended for cases where there is only one decoder matching these parameters
         """
         return self.get_decoders(**kwargs)[0]
+
+    def train_decoder(self, model: nn.Module, input_components: Iterable | None, train_params: TrainParams,
+                      standardize=True, verbosity=0,
+                      **kwargs) -> TrainerABC:
+        """
+        Train decoder to reconstruct features from given components of the encoding and add it to decoders
+        Args:
+            model: the model to be trained
+            input_components: The components of the encoding that are used as inputs. If None, use all components
+            train_params: The training parameters to be used
+            standardize: If true, use standardized features (mean 0, standard deviation 1) as labels
+            verbosity:
+            **kwargs: key-value pairs associated with the decoder. Can be chosen freely apart from the restrictions
+                in DRDecoders.add_decoder
+        """
+        if input_components is None:
+            inputs = self.encoding
+        else:
+            input_components = list(input_components)
+            # check if input components are indeces or column names
+            if all(isinstance(c, numbers.Integral) for c in input_components):
+                inputs = np.array(self.encoding)[:, input_components]
+            else:
+                inputs = np.array(self.encoding[input_components])
+        if standardize:
+            labels = self.features_std
+        else:
+            labels = self.features
+        trainer = TrainerNew(model, train_params).train(inputs, labels, verbosity=verbosity)
+        self.add_decoder(trainer, **kwargs)
+        return trainer
+
+    def train_decoders_incremental(self, create_model: Callable[[int], nn.Module], components: Iterable,
+                                   train_params: TrainParams, components_name = "components",
+                                   n_components_name="ndims", standardize=True):
+        pass
+
 
     def decode(self, **kwargs) -> pd.DataFrame:
         """Get reconstruction of original data using the decoder matching the keyword arguments"""

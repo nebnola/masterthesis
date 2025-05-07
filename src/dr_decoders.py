@@ -37,7 +37,7 @@ class DRDecoders:
         self.decoders = pd.DataFrame()
         self.description = description
 
-    def add_decoder(self, decoder: TrainerABC, **kwargs) -> None:
+    def add_decoder(self, decoder: TrainerABC | None, **kwargs) -> None:
         """Add a decoder to the structure. Use arbitrary keyword arguments to label it with attributes
         Use the same structure (name and type) for the attributes for all decoders, however this is not enforced
         Do not use the following keys:
@@ -65,8 +65,7 @@ class DRDecoders:
         return self.get_decoders(**kwargs)[0]
 
     def train_decoder(self, model: nn.Module, input_components: Iterable | None, train_params: TrainParams,
-                      standardize=True, verbosity=0,
-                      **kwargs) -> TrainerABC:
+                      standardize=True, verbosity=0, attributes={}) -> TrainerABC:
         """
         Train decoder to reconstruct features from given components of the encoding and add it to decoders
         Args:
@@ -75,8 +74,8 @@ class DRDecoders:
             train_params: The training parameters to be used
             standardize: If true, use standardized features (mean 0, standard deviation 1) as labels
             verbosity:
-            **kwargs: key-value pairs associated with the decoder. Can be chosen freely apart from the restrictions
-                in DRDecoders.add_decoder
+            attributes: dictionary of key-value pairs associated with the decoder. Can be chosen freely apart from the
+                restrictions in DRDecoders.add_decoder
         """
         if input_components is None:
             inputs = self.encoding
@@ -92,13 +91,46 @@ class DRDecoders:
         else:
             labels = self.features
         trainer = TrainerNew(model, train_params).train(inputs, labels, verbosity=verbosity)
-        self.add_decoder(trainer, **kwargs)
+        self.add_decoder(trainer, **attributes)
         return trainer
 
-    def train_decoders_incremental(self, create_model: Callable[[int], nn.Module], components: Iterable,
-                                   train_params: TrainParams, components_name = "components",
-                                   n_components_name="ndims", standardize=True):
-        pass
+    def train_decoders_incremental(self, create_model: Callable[[int], nn.Module], train_params: TrainParams,
+                                   components: Iterable, start=0,
+                                   components_name = "components",
+                                   n_components_name="ndims", standardize=True) -> None:
+        """
+        Train decoders to reconstruct features from different numbers of components of the encoding
+        Args:
+            create_model: Function to create the model. Receives the number of components
+            train_params: training parameters to use for training
+            components: The components to go through. Decoders are trained for [components[0]], then [components[0],
+                components[1]], and so on
+            start: How many components to start with. Default 0. If set to something larger than 0, training ist
+                started with [components[0], ..., components[start-1]]
+            components_name: The name for the column in the data frame that indicates the components used. Default
+                "components"
+            n_components_name: The name for the column in the data frame that indicates the number of components
+                used. Default "ndims"
+            standardize: Whether to use standardized features for training. Default True
+        """
+        components = list(components)
+        for ndims in range(start, len(components) + 1):
+            if ndims == 0:
+                # Add MSE for zero dimension
+                features = self.features_std if standardize else self.features
+                var = np.mean(np.var(features.to_numpy(), axis=0))
+                self.add_decoder(None, **{components_name: [()], n_components_name: [0], 'test_loss': [var],
+                                        'training_loss': [var]} )
+                continue
+            use_components = tuple(components[:ndims])
+            print(f"Training with components {use_components}")
+            model = create_model(ndims)
+            self.train_decoder(model, use_components, train_params, standardize, verbosity=0,
+                               attributes = {
+                                   components_name: use_components,
+                                   n_components_name: ndims
+                               })
+        self.test_decoders()
 
 
     def decode(self, **kwargs) -> pd.DataFrame:
@@ -118,15 +150,22 @@ class DRDecoders:
 
     def test_decoders(self) -> None:
         """Test decoders and store the result in the decoders structure"""
-        # TODO only test decoders which have not been tested?
-        training_losses, test_losses = [], []
+        # Makes sure indeces are unique so that the following code works
+        self.decoders.reset_index(drop=True, inplace=True)
+        # create loss columns if they don't exist yet
+        if 'training_loss' not in self.decoders.columns:
+            self.decoders['training_loss'] = np.nan
+        if 'test_loss' not in self.decoders.columns:
+            self.decoders['test_loss'] = np.nan
         for i in range(len(self.decoders)):
-            run = self.decoders["decoder"][i]
-            training_loss, test_loss = run.test()
-            training_losses.append(training_loss)
-            test_losses.append(test_loss)
-        self.decoders["training_loss"] = training_losses
-        self.decoders["test_loss"] = test_losses
+            row = self.decoders.loc[i]
+            # check if loss is already written
+            if (pd.isna(row['training_loss']) or
+                    pd.isna(row['test_loss'])):
+                trainer = row['decoder']
+                if not pd.isna(trainer):
+                    training_loss, test_loss = trainer.test()
+                    self.decoders.loc[i, ['training_loss', 'test_loss']] = [training_loss, test_loss]
 
     @property
     def features(self):

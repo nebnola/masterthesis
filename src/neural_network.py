@@ -1,6 +1,6 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Self
+from typing import Self, Tuple
 
 import numpy as np
 import pandas as pd
@@ -45,6 +45,11 @@ class FeedForward(nn.Module):
 class TrainerABC(ABC):
     """Abstract class subclassed by Trainer and TrainerNew during the migration"""
     pass
+
+    @abstractmethod
+    def test(self) -> Tuple[float, float]:
+        pass
+
 
 class Trainer(TrainerABC):
     """
@@ -363,6 +368,7 @@ class TrainerNew(TrainerABC):
         axlr = ax.twinx()
         axlr.plot(loss_record["epoch"], loss_record["learning_rate"], label='learning rate')
         axlr.set_ylabel("learning rate")
+        axlr.semilogy()
 
         fig.legend()
 

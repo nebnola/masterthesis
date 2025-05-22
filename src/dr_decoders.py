@@ -119,8 +119,8 @@ class DRDecoders:
                 # Add MSE for zero dimension
                 features = self.features_std if standardize else self.features
                 var = np.mean(np.var(features.to_numpy(), axis=0))
-                self.add_decoder(None, **{components_name: [()], n_components_name: [0], 'test_loss': [var],
-                                        'training_loss': [var]} )
+                self.add_decoder(None, **{components_name: (), n_components_name: 0, 'test_loss': var,
+                                        'training_loss': var} )
                 continue
             use_components = tuple(components[:ndims])
             print(f"Training with components {use_components}")
@@ -141,7 +141,8 @@ class DRDecoders:
         output = decoder.model(test_data)
         # get index. Assume test data is at the end of the data frame
         size = len(output)
-        return pd.DataFrame(output.detach().numpy(), index=self.data.index[-size:], columns=list(self.feature_columns))
+        columns = self.feature_columns or self.data.columns
+        return pd.DataFrame(output.detach().numpy(), index=self.data.index[-size:], columns=list(columns))
 
     def get_training_size(self, **kwargs) -> int:
         """Get training size that was used for training a decoder given by kwargs"""

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+import dataclasses
 from typing import Self, Tuple
 
 import numpy as np
@@ -196,7 +196,7 @@ class Trainer(TrainerABC):
         return training_loss / len(self.train_dataloader), test_loss / len(self.test_dataloader)
 
 
-@dataclass
+@dataclasses.dataclass
 class TrainParams:
     """
     Data class for containing training parameters. Does not include model parameters such as the network layers
@@ -215,6 +215,11 @@ class TrainParams:
     Early stopping is activated when early_stopping_patience is set to an integer.
     After ReduceLROnPlateau reaches its last learning rate, training is continued for early_stopping_patience
     epochs, then stopped"""
+
+    def replace(self, **kwargs):
+        """Return a copy of TrainParams instance with attributes changed according to keyword arguments
+        """
+        return dataclasses.replace(self, **kwargs)
 
 class TrainerNew(TrainerABC):
 

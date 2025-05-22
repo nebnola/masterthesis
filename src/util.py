@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+
 import plotnine as p9
 import plotly.graph_objects as go
 
@@ -77,3 +79,22 @@ def visualize_graph_3d(coords, adjacency_matrix, threshold):
         hoverinfo="skip",
     )
     return edge_trace
+
+
+def array_to_df(data, prefix: str, indexing = 1):
+    """
+    Convert a 2D array into a pandas DataFrame with prefixed column names.
+
+    Parameters:
+    - data (array-like): A two-dimensional array to convert into a DataFrame.
+    - prefix (str): Prefix for the column names.
+    - indexing (int, optional): Starting index for column naming. Defaults to 1.
+
+    Returns:
+    - pd.DataFrame: DataFrame with columns named using the prefix and index.
+    """
+    if len(data.shape) != 2:
+        raise ValueError("Need two-dimensional array to transform into DataFrame")
+    n_columns = data.shape[1]
+    columns = [prefix+str(i) for i in range(indexing, indexing + n_columns)]
+    return pd.DataFrame(data, columns=columns)

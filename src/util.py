@@ -1,48 +1,16 @@
 import numpy as np
 import pandas as pd
 
-import plotnine as p9
 import plotly.graph_objects as go
+
+# import for backwards-compatibility, so the themes can still be imported via util
+from src.plot_themes import theme_chill, theme_arguelles, theme_arguelles_sans
 
 def compare_dmaps(dmap1, dmap2):
     """Compare two diffusion maps, correcting the signs of the components"""
     maximal_idx = (np.argmax(np.abs(dmap1), axis=0), np.arange(dmap1.shape[1]))
     dmap1p = dmap1 * np.sign(dmap1[maximal_idx]) * np.sign(dmap2[maximal_idx])
     return np.max(np.abs(dmap1p - dmap2))
-
-theme_chill = (
-        p9.theme_bw()
-        + p9.theme(
-    plot_background=p9.element_rect(fill=(0,0,0,0), size=0),
-    panel_background = p9.element_rect(fill=(0,0,0,0)),
-    legend_background=p9.element_rect(fill=(0, 0, 0, 0)),
-))
-
-theme_arguelles = (
-    p9.theme_bw(base_size=14) +
-    p9.theme(
-        text=p9.element_text(family="Alegreya", color="#343A40"),
-        axis_text=p9.element_text(family="sans"),
-        plot_background=p9.element_rect(fill=(0, 0, 0, 0), size=0),
-        panel_background=p9.element_rect(fill=(0, 0, 0, 0)),
-        legend_background=p9.element_rect(fill=(0, 0, 0, 0)),
-        strip_background=p9.element_rect(fill="#343A40"),
-        strip_text=p9.element_text(color="#F8F9FA"),
-    )
-)
-
-theme_arguelles_sans = (
-        p9.theme_bw(base_size=14) +
-        p9.theme(
-            text=p9.element_text(family="Alegreya Sans", color="#343A40"),
-            axis_text=p9.element_text(family="sans", size=9, color="#4D4D4D"),
-            plot_background=p9.element_rect(fill=(0, 0, 0, 0), size=0),
-            panel_background=p9.element_rect(fill=(0, 0, 0, 0)),
-            legend_background=p9.element_rect(fill=(0, 0, 0, 0)),
-            strip_background=p9.element_rect(fill="#343A40"),
-            strip_text=p9.element_text(color="#F8F9FA"),
-        )
-)
 
 def visualize_graph_3d(coords, adjacency_matrix, threshold):
     """

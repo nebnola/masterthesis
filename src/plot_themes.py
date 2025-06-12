@@ -41,7 +41,7 @@ theme_arguelles_sans = (
 )
 
 theme_thesis = (
-    p9.theme_bw(base_size=10.95, base_family="Palatino") +
+    p9.theme_bw(base_size=10.95, base_family="P052") + # Palatino
     p9.theme(
         strip_background=p9.element_rect(fill="white"),
         figure_size=(6,4),

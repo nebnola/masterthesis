@@ -168,6 +168,14 @@ class DRDecoders:
                     training_loss, test_loss = trainer.test()
                     self.decoders.loc[i, ['training_loss', 'test_loss']] = [training_loss, test_loss]
 
+    def add_norm_loss(self, n_components_name="ndims") -> None:
+        """Add normalized loss column to decoders"""
+        ndims0 = self.decoders[self.decoders[n_components_name] == 0]
+        if len(ndims0) != 1:
+            raise ValueError("There needs to be exactly one row with 0 dimensions")
+        var = ndims0.loc[0, "test_loss"]
+        self.decoders["test_loss_norm"] = self.decoders["test_loss"] / var
+
     @property
     def features(self):
         """Get features of dataset. I.e. only the columns which are supposed to be used for training"""

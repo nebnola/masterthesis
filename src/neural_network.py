@@ -221,6 +221,46 @@ class TrainParams:
         """
         return dataclasses.replace(self, **kwargs)
 
+    def to_latex(self):
+        """Export parameter values to LaTeX table"""
+        if self.scheduler == torch.optim.lr_scheduler.StepLR:
+            schedule_params = {
+                "initial learning rate": self.lr,
+                "learning rate schedule": "Stepwise reduction",
+                "step size": self.scheduler_kwargs["step_size"],
+                "reduction factor": self.scheduler_kwargs["gamma"],
+            }
+        elif self.scheduler == torch.optim.lr_scheduler.ReduceLROnPlateau:
+            try:
+                factor = self.scheduler_kwargs["factor"]
+            except KeyError:
+                factor = 0.1
+            schedule_params = {
+                "initial learning rate":  self.lr,
+                "learning rate schedule": "Reduce on plateau",
+                "threshold":              self.scheduler_kwargs["threshold"],
+                "reduction factor":       factor,
+            }
+        else:
+            schedule_params = {
+                "learning rate schedule": "unknown",
+            }
+        params = {
+            "Training size": self.training_size,
+            "Number of epochs": self.epochs,
+            "Batch size": self.batch_size,
+            "$\\beta$": self.weight_decay,
+            **schedule_params
+        }
+        table="\\begin{tabular}{ll}\n    \\toprule\n"
+
+        for key, val in params.items():
+            table+=f"    \\textbf{{{key}}} & {val}\\\\\n"
+        table+="    \\bottomrule\n\\end{tabular}"
+        return table
+
+
+
 class TrainerNew(TrainerABC):
 
     model: nn.Module

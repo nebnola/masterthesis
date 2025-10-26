@@ -3,6 +3,7 @@ from numbers import Number
 from pathlib import Path
 from typing import Optional
 
+import matplotlib as mpl
 import plotnine as p9
 from plotnine import ggplot
 
@@ -87,8 +88,13 @@ class PlotMux:
         self.show()
 
     def show(self) -> None:
-        p = self.render(self.default_profile)
-        p.show()
+        font = self.profiles[self.default_profile].theme.rcParams["font.family"]
+        params = {"mathtext.fontset": "custom",
+                  "mathtext.rm":      font,
+                  "mathtext.it":      f"{font}:italic"}
+        with mpl.rc_context(params):
+            p = self.render(self.default_profile)
+            p.show()
 
     def save(self, filename: str, figure_sizes: Optional[dict[str | tuple[Number, Number]]] = None, verbose=False, **kwargs) -> None:
         """
@@ -103,12 +109,17 @@ class PlotMux:
             figure_sizes = {}
 
         for name, profile in self.profiles.items():
-            p = self.render(name)
-            try:
-                width, height = figure_sizes[name]
-            except KeyError:
-                width, height = None, None
-            p.save(profile.path / filename, width= width, height=height, verbose=verbose, **kwargs)
+            font = profile.theme.rcParams["font.family"]
+            params = {"mathtext.fontset": "custom",
+                      "mathtext.rm":      font,
+                      "mathtext.it":      f"{font}:italic"}
+            with mpl.rc_context(params):
+                p = self.render(name)
+                try:
+                    width, height = figure_sizes[name]
+                except KeyError:
+                    width, height = None, None
+                p.save(profile.path / filename, width= width, height=height, verbose=verbose, **kwargs)
 
 
 class MaMux(PlotMux):

@@ -4,6 +4,11 @@ scikit-learn
 torch
 scipy
 pandas
-tqdm
 notebook
+setuptools
+pytest
+ipython
 plotnine
+ipywidgets
+plotly
+tqdm

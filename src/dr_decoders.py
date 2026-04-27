@@ -46,7 +46,8 @@ class DRDecoders:
         test_loss
         """
         # TODO: might use xarray instead
-        self.decoders = self.decoders._append(kwargs | {'decoder': decoder}, ignore_index=True)
+        new_row = pd.DataFrame([kwargs | {'decoder': decoder}])
+        self.decoders = pd.concat([self.decoders, new_row], ignore_index=True)
 
     def get_decoders(self, **kwargs) -> list[TrainerABC]:
         """
